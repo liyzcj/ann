@@ -5,7 +5,7 @@
 
 # ## 1. The MNIST dataset
 
-# In[2]:
+# In[1]:
 
 
 #!pip install mnist
@@ -21,7 +21,7 @@ test_labels  = mnist.test_labels()
 # 
 # Rescale input values to have zero mean and standard deviation of one.
 
-# In[3]:
+# In[2]:
 
 
 mean, std  = train_imgs.mean(), train_imgs.std()
@@ -31,16 +31,16 @@ test_imgs = (test_imgs - mean) / std
 
 # ### See some inputs
 
-# In[5]:
+# In[3]:
 
 
 from typing import List
 import numpy as np
-# get_ipython().run_line_magic('matplotlib', 'inline')
+get_ipython().run_line_magic('matplotlib', 'inline')
 import matplotlib.pyplot as plt
 
 
-# In[6]:
+# In[4]:
 
 
 idxs = np.random.randint(0, len(train_imgs), 15)
@@ -58,7 +58,7 @@ print("Labels:", train_labels[idxs])
 #  - `backward` gets $\frac{\partial {\cal L}}{\partial {\bf y}^{(l)}}$, and stores $\frac{\partial {\cal L}}{\partial {\bf w}^{(l)}}$ internally, and returns $\frac{\partial {\cal L}}{\partial {\bf w}^{(l)}}$
 #  - `update` modifies parameters ${\bf w}^{(l)}$ using stored $\frac{\partial{\cal L}}{\partial{\bf w}}$
 
-# In[7]:
+# In[5]:
 
 
 class Layer:
@@ -75,7 +75,7 @@ class Layer:
 
 # ### The feed-forward netowork
 
-# In[8]:
+# In[6]:
 
 
 class FeedForwardNetwork:
@@ -110,7 +110,7 @@ class FeedForwardNetwork:
 
 # ### The linear layer
 
-# In[14]:
+# In[149]:
 
 
 class Linear(Layer):
@@ -123,6 +123,12 @@ class Linear(Layer):
         self.dweight = np.zeros_like(self.weight)
         self.dbias = np.zeros_like(self.bias)
 
+        # for nestrov
+        #self.v = np.zeros_like(self.dweight)
+        #self.vw = np.zeros_likei(self.bias)
+        #self.last_dweight = np.zeros_like(self.dweight)
+        #self.last_bias = np.zeros_like(self.bias)
+        self.flag = 0
         
     def forward(self, x: np.ndarray) -> np.ndarray:
         # TODO <1> : compute the output of a linear layer
@@ -152,7 +158,28 @@ class Linear(Layer):
             self.bias -= lr * self.dbias
         elif mode == 'Nesterov':
             # TODO <9> : compute the nesterov update (for Lab 2)
-            raise NotImplementedError
+            """
+            LI YANZHE
+            """
+            if self.flag == 0:
+                self.last_dweight = self.dweight.copy()
+                self.last_bias = self.bias.copy()
+                self.vw = np.zeros_like(self.dweight)
+                self.vb = np.zeros_like(self.bias)
+                self.flag = 1
+                
+            # update v
+            self.vw = mu * self.vw + self.dweight + mu * (self.dweight - self.last_dweight)
+            self.vb = mu * self.vb + self.dbias + mu * (self.bias - self.last_bias)
+            # save this weight and bias as last weight and bias
+            self.last_bias = self.bias.copy()
+            self.last_dweight = self.dweight.copy()
+            # update weight and bias
+            self.weight = self.weight - lr * self.vw
+            self.bias = self.bias - lr * self.vb
+            
+            
+            # raise NotImplementedError
         elif mode == 'Adam':
             # TODO <10> : compute the Adam update  (for Lab 2)
             raise NotImplementedError
@@ -161,7 +188,7 @@ class Linear(Layer):
 # ### The Rectified Linear Unit
 # $$y = \max\left(x, 0\right)$$
 
-# In[10]:
+# In[8]:
 
 
 class ReLU(Layer):
@@ -192,7 +219,7 @@ class ReLU(Layer):
 # 
 #    The negative log likelihood combines a softmax activation, and a cross-entropy cost.
 
-# In[20]:
+# In[130]:
 
 
 class NegativeLogLikelihood:
@@ -227,14 +254,14 @@ class NegativeLogLikelihood:
         T = T == t
         # softmax 
         s = np.exp(y) / np.sum(np.exp(y), axis=1).reshape(-1,1)
-        dy = s - T
+        dy = (s - T) /m
         return dy
         raise NotImplementedError
 
 
 # ### Accuracy
 
-# In[12]:
+# In[51]:
 
 
 def accuracy(y: np.ndarray, t: np.ndarray) -> float:
@@ -244,30 +271,41 @@ def accuracy(y: np.ndarray, t: np.ndarray) -> float:
     """
     # process t
     m = t.shape[0]
-    T = np.repeat(np.arange(10).reshape(1,10), m, axis=0)
-    t = t.reshape(-1,1)
-    T = T == t
+    # T = np.repeat(np.arange(10).reshape(1,10), m, axis=0)
+    # t = t.reshape(-1,1)
+    # T = T == t
+    # process y
+    y = np.argmax(y, axis = 1)
     # compute accuracy
-    a = np.sum(y * T) / m
+    # a = np.sum(y * T) / m
+    a = np.sum(y == t) / m
     return a
     raise NotImplementedError
 
 
 # ## 4. Training a neural network
 
-# In[ ]:
+# ### Initial neural network
+
+# In[158]:
 
 
 BATCH_SIZE = 128
 HIDDEN_UNITS = 200
 EPOCHS_NO = 20
 
-optimize_args = {'mode': 'SGD', 'lr': .005}
+optimize_args = {'mode': 'SGD', 'lr': .001}
 
 net = FeedForwardNetwork([Linear(784, HIDDEN_UNITS),
                           ReLU(),
                           Linear(HIDDEN_UNITS, 10)])
 nll = NegativeLogLikelihood()
+
+
+# ### Train 
+
+# In[ ]:
+
 
 for epoch in range(EPOCHS_NO):
     for b_no, idx in enumerate(range(0, len(train_imgs), BATCH_SIZE)):
@@ -301,4 +339,21 @@ for epoch in range(EPOCHS_NO):
     test_nll = nll.forward(y, test_labels)
     print(f' | Test NLL: {test_nll:3.5f} '
           f' | Test Accuracy: {accuracy(y, test_labels):3.2f}')
+
+
+# ## 5. Pradict Number
+
+# In[153]:
+
+
+# random get number
+idxs = np.random.randint(0, len(train_imgs), 15)
+imgs = np.concatenate(tuple(train_imgs[idx,:,:] for idx in idxs), axis=1)
+x = np.array([train_imgs[idx,:,:] for idx in idxs]).reshape(-1,784)
+#pradicate number
+y = net.forward(x)
+y = np.argmax(y,axis=1)
+plt.imshow(imgs)
+print("Pradict Labels:",y)
+print("Correct Labels:",train_labels[idxs])
 
