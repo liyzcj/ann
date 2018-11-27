@@ -112,23 +112,28 @@ class RBM:
                 print(f'Epoch {epoch}: Error is {error}')
 
 
-    def reconstruct(self, data):
+    def reconstruct(self, data, epoches=1):
         """
         Reconstruct the data use this rbm.
         Paramter:
         ----------
         data : A numpy matrix where each row is a Example.
+        epoches : the number of reconstruct iteration
         Return: 
         ----------
         visible_probs : the reconstructed data, has the same number of examples with data
         """
 
         num_data = data.shape[0]
-        # compute hidden units
-        hidden_prop = self._sigmoid(data @ self.weights + self.hidden_bias)
-        hidden_units = hidden_prop > np.random.rand(num_data, self.num_hidden)
+        visible_units = data
 
-        # reconstruction use hidden units
-        visible_probs = self._sigmoid(hidden_units @ self.weights.T + self.visible_bias)
+        for epoch in range(epoches):
+            # compute hidden units
+            hidden_prop = self._sigmoid(visible_units @ self.weights + self.hidden_bias)
+            hidden_units = hidden_prop > np.random.rand(num_data, self.num_hidden)
 
-        return visible_probs
+            # reconstruction use hidden units
+            visible_prob = self._sigmoid(hidden_units @ self.weights.T + self.visible_bias)
+            visible_units = visible_prob > np.random.rand(num_data, self.num_visible)
+
+        return visible_prob, visible_units
