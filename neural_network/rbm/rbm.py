@@ -108,7 +108,7 @@ class RBM:
             error = np.sum((batch_data - negtive_visible_prob) ** 2)
             
             # Print Debug message
-            if epoch % 100 == 0:
+            if epoch % 1000 == 0:
                 print(f'Epoch {epoch}: Error is {error}')
 
 
