@@ -20,7 +20,7 @@ TAU = 0.01      # soft replacement
 MEMORY_CAPACITY = 10000
 BATCH_SIZE = 32
 
-RENDER = True
+RENDER = False
 ENV_NAME = 'Pendulum-v0'
 
 

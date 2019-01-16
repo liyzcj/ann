@@ -54,7 +54,7 @@ for i_episode in range(3000):
 
             if i_episode == 0:
                 plt.plot(vt)    # plot the episode vt
-                plt.xlabel('episode steps')
+                plt.xlabel('frames')
                 plt.ylabel('normalized state-action value')
                 plt.show()
             break
